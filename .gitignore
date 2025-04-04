@@ -8,3 +8,11 @@ wheels/
 
 # Virtual environments
 .venv
+
+# VSCode settings
+.vscode/
+
+# Database files
+*.sqlite3
+*.db
+*.sql
