@@ -21,42 +21,75 @@ class SQLiteMigrator:
     for help with creating scripts.
 
     The migrator will execute all scripts with a version number greater than the
-    current database version.
+    current database version in numeric order.
 
     A backup of the database is created before migration and is stored in the
     backups directory.
     """
 
-    def __init__(self, db_path: Path, migrations_dir: Path, backup_dir: Path) -> None:
+    def __init__(
+        self, sql_db: SQLiteInterface, migrations_dir: Path, backup_dir: Path
+    ) -> None:
+        """Initializes the SQLite migrator.
+
+        Args:
+            sql_db: SQLite interface
+            migrations_dir: path to directory with migration files
+            backup_dir: path to directory to store backups
+        """
+
         migrations_dir.mkdir(parents=True, exist_ok=True)
         backup_dir.mkdir(parents=True, exist_ok=True)
 
+        self.db = sql_db
         self.migrations_dir = migrations_dir
         self.backup_dir = backup_dir
 
-        self.sql_db = SQLiteInterface(db_path)
-        self._create_migration_table_if_not_exist()
+        self.create_migration_table()
 
-    def _create_migration_table_if_not_exist(self):
+    def create_migration_table(self):
         """Creates the migrations table if it doesn't exist."""
 
-        self.sql_db.execute_sql(
+        self.db.execute_sql(
             """
             CREATE TABLE IF NOT EXISTS migrations (
                 version INTEGER PRIMARY KEY,
                 sql_script TEXT NOT NULL,
                 applied_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-            );
-            """,
-            count_changes=True,
+            )
+            """
         )
 
-    def restore(self, backup_path: Path) -> bool:
-        """Restores the database to the given backup."""
+    def get_database_version(self) -> int:
+        """Returns the current database version from the migrations table."""
 
-        database_version = self.sql_db.get_version()
-        backup_path.replace(self.sql_db.db_path)
-        reverted_version = self.sql_db.get_version()
+        query = "SELECT version FROM migrations ORDER BY version DESC LIMIT 1"
+        version = self.db.fetch_one(query)
+
+        return version[0] if version else 0
+
+    def create_backup(self, backup_path: Path) -> None:
+        """Creates a backup of the SQLite database.
+
+        Args:
+            backup_path: Path to the backup file
+        """
+
+        self.db.execute_sql("VACUUM main INTO ?", (backup_path.as_posix(),))
+
+    def restore(self, backup_path: Path) -> bool:
+        """Restores the database to the given backup.
+
+        Args:
+            backup_path: Path to the backup file
+
+        Returns:
+
+        """
+
+        database_version = self.get_database_version()
+        backup_path.replace(self.db.db_path)
+        reverted_version = self.get_database_version()
 
         # Remove the schema.sql file
         schema_files = list(self.migrations_dir.glob(f"schema_v{database_version}.sql"))
@@ -69,7 +102,8 @@ class SQLiteMigrator:
     ) -> None:
         """Migrate the database to the latest version.
 
-        The data_generator is a callable that is run after the first migration only.
+        Args:
+            data_generator: Callable run after the first migration only.
         """
 
         pending_migrations = self.get_pending_migrations()
@@ -81,7 +115,7 @@ class SQLiteMigrator:
         for version, sql_script in pending_migrations.items():
             self.backup_database()
             # Open a connection for fine-grained control during migration
-            connection = sqlite3.connect(self.sql_db.db_path)
+            connection = sqlite3.connect(self.db.db_path)
             try:
                 # Execute the migration script
                 connection.executescript(sql_script)
@@ -101,24 +135,24 @@ class SQLiteMigrator:
                 connection.close()
 
             if version == 1 and data_generator is not None:
-                data_generator(self.sql_db)
+                data_generator(self.db)
 
     def get_pending_migrations(self) -> dict[int, str]:
         """Returns a dictionary of pending migrations as {version: script_content}."""
 
-        def _get_migration_version(migration: Path) -> int:
+        def get_migration_version(migration: Path) -> int:
             try:
                 version = migration.stem.split("migration_")[1]
                 return int(version)
             except ValueError:
                 return -1
 
-        database_version = self.sql_db.get_version()
+        database_version = self.get_database_version()
         migration_files = sorted(self.migrations_dir.glob("migration_*.sql"))
         migrations = {}
 
         for migration in migration_files:
-            migration_version = _get_migration_version(migration)
+            migration_version = get_migration_version(migration)
             if migration_version > database_version:
                 migrations[migration_version] = migration.read_text()
 
@@ -127,21 +161,22 @@ class SQLiteMigrator:
     def backup_database(self) -> None:
         """Backs up the database to the backup directory."""
 
-        database_version = self.sql_db.get_version()
-
+        database_version = self.get_database_version()
         now = datetime.now(UTC).strftime("%Y-%m-%dT%H%M%S")
         back_name = f"backup_v{database_version}_{now}.sqlite3"
         backup_path = self.backup_dir / back_name
-        self.sql_db.create_backup(backup_path)
+        self.create_backup(backup_path)
         log.info(f"Backed up database to {backup_path}...")
 
     def write_db_schema_script(self, version: int) -> None:
-        """Writes the version schema.sql to the migrations directory."""
+        """Writes the schema.sql file to the migrations directory.
+
+        Args:
+            version: integer schema version number
+        """
 
         latest_schema_path = self.migrations_dir / f"schema_v{version}.sql"
-        tables = self.sql_db.fetch_all(
-            "SELECT sql FROM sqlite_master WHERE type='table'"
-        )
+        tables = self.db.fetch_all("SELECT sql FROM sqlite_master WHERE type='table'")
         if tables:
             latest_schema_path.write_text(
                 (

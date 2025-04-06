@@ -3,9 +3,10 @@ import sqlite3
 from sqlite_manager.interface import DEFAULT_PRAGMAS, SQLiteInterface
 
 
-def test_init_sqlite_interface(db_path: Path):
+def test_init_sqlite_interface(tmp_path: Path):
     """Test the initialization of the SQLiteInterface."""
 
+    db_path = tmp_path / "test.db"
     interface = SQLiteInterface(db_path)
     assert interface.db_path == db_path
     assert interface.pragmas == DEFAULT_PRAGMAS
@@ -16,35 +17,11 @@ def test_init_sqlite_interface(db_path: Path):
     assert db_path.exists()
 
 
-def test_get_version(test_db: SQLiteInterface):
-    assert test_db.get_version() == 0
-
-
-def test_create_backup(test_db: SQLiteInterface, tmp_path: Path):
-    """Test the creation of a backup of the SQLite database."""
-
-    test_db.execute_sql("CREATE TABLE test_table (test_column);")
-
-    backup_path = tmp_path / "backup.db"
-    test_db.create_backup(backup_path)
-    assert backup_path.exists()
-
-    # Check that the backup contains test_table
-    backup_db = SQLiteInterface(backup_path)
-    with backup_db.connection() as con:
-        cursor = con.cursor()
-        cursor.execute("SELECT name FROM sqlite_master WHERE type='table';")
-        tables = cursor.fetchall()
-        assert ("test_table",) in tables
-
-
 def test_execute_sql(test_db: SQLiteInterface):
     """Test the execution of SQL queries."""
 
     test_db.execute_sql("CREATE TABLE test_table (test_column);")
-    changes = test_db.execute_sql(
-        "INSERT INTO test_table VALUES ('test_value')", count_changes=True
-    )
+    changes = test_db.execute_sql("INSERT INTO test_table VALUES ('test_value')")
     assert changes == 1
 
     # Check that the row exists

@@ -20,12 +20,24 @@ DEFAULT_PRAGMAS = {
 }
 
 
+class SQLiteInterfaceError(Exception):
+    """Base exception for SQLiteInterface errors."""
+
+
+class SQLiteQueryError(SQLiteInterfaceError):
+    """Exception raised for SQL query errors."""
+
+
 class SQLiteInterface:
     """SQLite interface for handling database connections and queries."""
 
     def __init__(self, db_path: Path, pragmas: dict = DEFAULT_PRAGMAS) -> None:
-        """Initializes the SQLite interface with the given database path and pragmas."""
+        """Initializes the SQLite interface with the given database path and pragmas.
 
+        Args:
+            db_path: Path to the SQLite database file
+            pragmas: Dict of SQLite PRAGMA settings to apply on each connection
+        """
         db_path.parent.mkdir(parents=True, exist_ok=True)
         self.db_path = db_path
         self.pragmas = pragmas or {}
@@ -36,10 +48,16 @@ class SQLiteInterface:
     ) -> Generator[sqlite3.Connection, None, None]:
         """Returns a connection to the SQLite database wih applied pragmas.
 
-        SQLite doesn't close the connection when using context managers, so
-        it has to be closed manually.
-        """
+        Commits the transaction if no exceptions occur. The connection is closed
+        automatically after use. If an exception occurs, the connection is rolled back.
+        If a row_factory is provided, it is used to convert rows to the desired format.
 
+        Args:
+            row_factory: Optional callable that converts rows to desired format
+
+        Yields:
+            An active SQLite connection with pragmas applied
+        """
         with closing(sqlite3.connect(self.db_path)) as con, con:
             for pragma, value in self.pragmas.items():
                 con.execute(f"PRAGMA {pragma} = {value};")
@@ -49,71 +67,51 @@ class SQLiteInterface:
 
             yield con
 
-    def get_version(self) -> int | None:
-        """Returns the current database version from the migrations table."""
+    def execute_sql(self, query: str, params: Mapping[str, Any] = {}) -> None | int:
+        """Executes a SQL query and returns the number of changes if requested.
+
+        Args:
+            query: SQL query to execute
+            params:  Optional parameters to bind to the query
+
+        Returns:
+            Number of applied changes
+
+        Raises:
+            SQLiteQueryError: If the query execution fails
+        """
 
         try:
-            query = "SELECT version FROM migrations ORDER BY version DESC LIMIT 1"
-            version = self.fetch_one(query)
-            return version[0] if version else 0
-        except sqlite3.OperationalError:
-            log.info("No migrations table found. Assuming version 0.")
-            return 0
-
-    def create_backup(self, backup_path: Path) -> None:
-        """Creates a backup of the SQLite database.
-
-        Args:
-            backup_path: Path to the backup file
-        """
-
-        backup_path.parent.mkdir(parents=True, exist_ok=True)
-        self.execute_sql("VACUUM main INTO ?", (backup_path.as_posix(),))
-
-    # self, query: str, params: Mapping[str, Any] = None, count_changes: bool = False
-
-    def execute_sql(
-        self, query: str, params: Mapping[str, Any] = {}, count_changes: bool = False
-    ) -> None | int:
-        """Executes a SQL query and returns the number of changes if requested.
-
-        Args:
-            query: SQL query to execute
-            params:  Optional parameters to bind to the query
-            count_changes: Whether to return the number of rows affected
-
-        Returns:
-            Number of affected rows if count_changes is True, None otherwise
-        """
-
-        changes = None
-        with self.connection() as con:
-            cursor = con.execute(query, params)
-            if count_changes:
-                changes = cursor.execute("select changes();").fetchone()[0]
-
-        return changes
+            with self.connection() as con:
+                cursor = con.execute(query, params)
+                changes = cursor.execute("select changes()").fetchone()[0]
+            return changes
+        except sqlite3.Error as e:
+            raise SQLiteQueryError(f"Failed to execute query: {e}") from e
 
     def execute_many(
-        self, query: str, params: Mapping[str, Any] = {}, count_changes: bool = False
+        self, query: str, params: list[Mapping[str, Any]] = []
     ) -> None | int:
-        """Executes a SQL query and returns the number of changes if requested.
+        """Executes a SQL query with multiple parameter sets.
 
         Args:
             query: SQL query to execute
-            params:  Optional parameters to bind to the query
-            count_changes: Whether to return the number of rows affected
+            params: List of parameter sets to bind to the query
 
         Returns:
-            Number of affected rows if count_changes is True, None otherwise
+            Number of applied changes
+
+        Raises:
+            SQLiteQueryError: If the query execution fails
         """
 
-        changes = None
-        with self.connection() as con:
-            cursor = con.executemany(query, params)
-            if count_changes:
-                changes = cursor.execute("select changes();").fetchone()[0]
-        return changes
+        try:
+            with self.connection() as con:
+                cursor = con.executemany(query, params)
+                changes = cursor.execute("select changes()").fetchone()[0]
+            return changes
+        except sqlite3.Error as e:
+            raise SQLiteQueryError(f"Failed to execute batch query: {e}") from e
 
     def fetch_one(
         self,
@@ -152,16 +150,5 @@ class SQLiteInterface:
             A list of rows in the format specified by row_factory, or None if no results
         """
 
-        with self.connection() as con:
-            if row_factory:
-                con.row_factory = row_factory
+        with self.connection(row_factory) as con:
             return con.execute(query, params).fetchall()
-
-    def get_dict_factory(self) -> Callable[[Cursor, Row], dict]:
-        """Returns a dictionary factory for SQLite queries."""
-
-        def dict_factory(cursor, row):
-            fields = [column[0] for column in cursor.description]
-            return {key: value for key, value in zip(fields, row)}
-
-        return dict_factory
