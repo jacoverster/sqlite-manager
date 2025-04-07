@@ -7,20 +7,32 @@ name = "sqlite-manager"
 version = "0.1.0"
 description = "A lightweight, type-safe Python library for managing SQLite databases"
 readme = "README.md"
+license = { file = "LICENSE" }
+classifiers=[
+    'Development Status :: 4 - Beta',
+    'Intended Audience :: Developers',
+    'License :: OSI Approved :: MIT License',
+    'Operating System :: OS Independent',
+    'Programming Language :: Python :: 3.11',
+    'Programming Language :: Python :: 3.12',
+    'Programming Language :: Python :: 3.13',
+    'Programming Language :: Python :: 3 :: Only',
+    'Topic :: Software Development :: Libraries :: Python Modules',
+]
 authors = [
     { name = "Jaco Verster", email = "versterrie@gmail.com" }
 ]
 requires-python = ">=3.11"
-dependencies = []
+dependencies = [
+    "typing_extensions>=4.0.0; python_version < '3.12'"
+]
 
-[dependency-groups]
+[project.optional-dependencies]
 dev = [
     "bcrypt>=4.3.0",
     "pytest>=8.3.5",
     "ruff>=0.11.4",
 ]
-
-[project.optional-dependencies]
 users = [
     "bcrypt>=4.3.0",
 ]
@@ -28,4 +40,3 @@ examples = [
     "ipykernel>=6.29.5",
     "pydantic>=2.11.2",
 ]
-
