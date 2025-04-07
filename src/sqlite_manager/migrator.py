@@ -5,6 +5,7 @@ from pathlib import Path
 import sqlite3
 
 from sqlite_manager.interface import SQLiteInterface
+from textwrap import dedent
 
 
 log = logging.getLogger(__name__)
@@ -27,9 +28,7 @@ class SQLiteMigrator:
     backups directory.
     """
 
-    def __init__(
-        self, sql_db: SQLiteInterface, migrations_dir: Path, backup_dir: Path
-    ) -> None:
+    def __init__(self, db_path: Path, migrations_dir: Path, backup_dir: Path) -> None:
         """Initializes the SQLite migrator.
 
         Args:
@@ -41,7 +40,7 @@ class SQLiteMigrator:
         migrations_dir.mkdir(parents=True, exist_ok=True)
         backup_dir.mkdir(parents=True, exist_ok=True)
 
-        self.db = sql_db
+        self.db = SQLiteInterface(db_path)
         self.migrations_dir = migrations_dir
         self.backup_dir = backup_dir
 
@@ -50,15 +49,15 @@ class SQLiteMigrator:
     def create_migration_table(self):
         """Creates the migrations table if it doesn't exist."""
 
-        self.db.execute_sql(
-            """
+        query = dedent(
+            """\
             CREATE TABLE IF NOT EXISTS migrations (
-                version INTEGER PRIMARY KEY,
-                sql_script TEXT NOT NULL,
-                applied_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-            )
-            """
+              version INTEGER PRIMARY KEY,
+              sql_script TEXT NOT NULL,
+              applied_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            )"""
         )
+        self.db.execute_sql(query)
 
     def get_database_version(self) -> int:
         """Returns the current database version from the migrations table."""
@@ -84,7 +83,7 @@ class SQLiteMigrator:
             backup_path: Path to the backup file
 
         Returns:
-
+            bool: True if the database was successfully restored, False otherwise
         """
 
         database_version = self.get_database_version()
@@ -138,7 +137,7 @@ class SQLiteMigrator:
                 data_generator(self.db)
 
     def get_pending_migrations(self) -> dict[int, str]:
-        """Returns a dictionary of pending migrations as {version: script_content}."""
+        """Returns a sorted dictionary of pending migrations as {version: script_content}."""
 
         def get_migration_version(migration: Path) -> int:
             try:

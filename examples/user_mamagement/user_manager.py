@@ -1,37 +1,13 @@
-from pathlib import Path
 import logging
-import os
 from sqlite3 import Cursor, Row
 import bcrypt
-from typing import Any, Dict, Literal, Optional, TypedDict, cast, override
+from typing import Literal, Optional, TypedDict, cast, override
 import re
 
 from sqlite_manager.interface import SQLiteInterface
-from sqlite_manager.migrator import SQLiteMigrator
 from sqlite_manager.crud import CRUDBase
 
-# Set up logging
-logging.basicConfig(
-    level=logging.INFO,
-    format="%(levelname)s: %(asctime)s | %(filename)s:%(lineno)d | %(message)s",
-)
 log = logging.getLogger(__name__)
-
-# Configuration
-PROJECT_DIR = Path(os.path.dirname(os.path.abspath(__file__)))
-DB_PATH = PROJECT_DIR / "userdata.db"
-MIGRATIONS_DIR = PROJECT_DIR / "migrations"
-BACKUP_DIR = PROJECT_DIR / "backups"
-
-
-def create_database():
-    """Creates the user database and applies migrations."""
-
-    sql_db = SQLiteInterface(DB_PATH)
-    migrator = SQLiteMigrator(DB_PATH, MIGRATIONS_DIR, BACKUP_DIR)
-    migrator.migrate()
-
-    return sql_db
 
 
 class UserManagerError(Exception):
@@ -39,11 +15,15 @@ class UserManagerError(Exception):
 
 
 class UserData(TypedDict):
-    """Type definition for user data."""
+    """Type definition for user data.
+
+    This model should match the database schema.
+    """
 
     user_id: int
     username: str
     role: Literal["admin", "user"]
+    hashed_password: str
     created_at: str
     last_login: Optional[str]
     activated: bool
@@ -58,12 +38,8 @@ class UserManager(CRUDBase[UserData]):
     Configuration options:
     - MIN_PASSWORD_LENGTH: Minimum required password length
     - USERNAME_PATTERN: Regex pattern for valid usernames
-    - BCRYPT_ROUNDS: Work factor for bcrypt password hashing
-    - MAX_LOGIN_ATTEMPTS: Maximum failed login attempts before lockout
-    - LOCKOUT_MINUTES: Duration of account lockout in minutes
     """
 
-    # Class constants for configuration
     MIN_PASSWORD_LENGTH = 8
     USERNAME_PATTERN = re.compile(r"^\w{3,30}$")
 
@@ -73,10 +49,8 @@ class UserManager(CRUDBase[UserData]):
         Args:
             sql_db: SQLiteInterface instance for database operations
         """
-        super().__init__(sql_db, "users", "user_id")
 
-        # Ensure required tables exist
-        self._initialize_auth_tables()
+        super().__init__(sql_db, "users", "user_id")
 
     @override
     def row_factory(self, cursor: Cursor, row: Row) -> UserData:
@@ -89,6 +63,7 @@ class UserManager(CRUDBase[UserData]):
         Returns:
             UserData dictionary with typed fields
         """
+
         row_fields = (column[0] for column in cursor.description)
         row_dict = {key: value for key, value in zip(row_fields, row)}
         annotations = UserData.__annotations__
@@ -103,9 +78,13 @@ class UserManager(CRUDBase[UserData]):
             username: The username to validate
 
         Returns:
-            True if username matches pattern, False otherwise"""
+            True if username matches pattern, False otherwise
+        """
 
-        return self.USERNAME_PATTERN.match(username)
+        if not self.USERNAME_PATTERN.match(username):
+            raise ValueError(
+                "Invalid username format: must be 3-30 alphanumeric characters or underscores"
+            )
 
     def _validate_password(self, password: str) -> bool:
         """Validate password meets security requirements.
@@ -116,16 +95,29 @@ class UserManager(CRUDBase[UserData]):
         Returns:
             True if password meets requirements, False otherwise
         """
-        # Minimum length check
+
         if len(password) < self.MIN_PASSWORD_LENGTH:
-            return False
+            raise ValueError(
+                f"Password must be at least {self.MIN_PASSWORD_LENGTH} characters long"
+            )
 
-        # Basic complexity checks
         has_upper = any(c.isupper() for c in password)
-        has_lower = any(c.islower() for c in password)
-        has_digit = any(c.isdigit() for c in password)
+        if not has_upper:
+            raise ValueError("Password must contain at least one uppercase letter")
 
-        return has_upper and has_lower and has_digit
+        has_lower = any(c.islower() for c in password)
+        if not has_lower:
+            raise ValueError("Password must contain at least one lowercase letter")
+
+        has_digit = any(c.isdigit() for c in password)
+        if not has_digit:
+            raise ValueError("Password must contain at least one number")
+
+        has_special = any(not c.isalnum() for c in password)
+        if not has_special:
+            raise ValueError("Password must contain at least one special character")
+
+        return True
 
     def create_user(self, username: str, password: str, role: str = "user") -> bool:
         """Create a new user in the database.
@@ -143,16 +135,8 @@ class UserManager(CRUDBase[UserData]):
             ValueError: If username or password is invalid
         """
 
-        if not self._validate_username(username):
-            raise ValueError(
-                "Invalid username format: must be 3-30 alphanumeric characters or underscores"
-            )
-
-        if not self._validate_password(password):
-            raise ValueError(
-                f"Password must be at least {self.MIN_PASSWORD_LENGTH} characters "
-                "with at least one uppercase letter, one lowercase letter, and one digit"
-            )
+        self._validate_username(username)
+        self._validate_password(password)
 
         existing = self.read({"username": username})
         if existing:
@@ -189,7 +173,8 @@ class UserManager(CRUDBase[UserData]):
             return None
 
         if bcrypt.checkpw(password.encode(), user["hashed_password"]):
-            self.update(user["user_id"], {"last_login": "CURRENT_TIMESTAMP"})
+            query = "UPDATE users SET last_login = CURRENT_TIMESTAMP WHERE user_id = ?"
+            self.db.execute_sql(query, (user["user_id"],))
             log.info(f"User authenticated: {username}")
             return user
 
@@ -229,12 +214,10 @@ class UserManager(CRUDBase[UserData]):
             UserExistsError: If new username already exists
             ValueError: If new username or password is invalid
         """
-        updates: Dict[str, Any] = {}
 
+        updates = {}
         if username is not None:
-            if not self._validate_username(username):
-                raise ValueError("Invalid username format")
-
+            self._validate_username(username)
             existing = self.read({"username": username})
             if existing:
                 raise UserManagerError(
@@ -243,11 +226,7 @@ class UserManager(CRUDBase[UserData]):
             updates["username"] = username
 
         if password is not None:
-            if not self._validate_password(password):
-                raise ValueError(
-                    f"Password must be at least {self.MIN_PASSWORD_LENGTH} characters "
-                    "with at least one uppercase letter, one lowercase letter, and one digit"
-                )
+            self._validate_password(password)
             updates["hashed_password"] = bcrypt.hashpw(
                 password.encode(), bcrypt.gensalt()
             )

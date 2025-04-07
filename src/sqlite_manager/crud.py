@@ -31,6 +31,7 @@ class CRUDBase(Generic[T]):
             table_name: Name of the table to operate on
             id_column: Name of the primary key column
         """
+
         self.db = sql_db
         self.table_name = table_name
         self.id_column = id_column
@@ -48,6 +49,7 @@ class CRUDBase(Generic[T]):
         Returns:
             A dictionary with column names as keys
         """
+
         return {column[0]: value for column, value in zip(cursor.description, row)}
 
     def create(self, **kwargs: Any) -> bool:
@@ -62,6 +64,7 @@ class CRUDBase(Generic[T]):
         Raises:
             SQLiteQueryError: If database operation fails
         """
+
         columns = ", ".join(kwargs.keys())
         placeholders = ", ".join("?" * len(kwargs))
         query = f"INSERT INTO {self.table_name} ({columns}) VALUES ({placeholders})"
@@ -88,6 +91,7 @@ class CRUDBase(Generic[T]):
             ValueError: If filter is empty
             SQLiteQueryError: If database operation fails
         """
+
         if not filter:
             raise ValueError("Filter cannot be empty")
 
@@ -115,8 +119,9 @@ class CRUDBase(Generic[T]):
         Raises:
             SQLiteQueryError: If database operation fails
         """
+
         if not updates:
-            return True  # Nothing to update
+            return True
 
         set_clause = ", ".join(f"{k} = ?" for k in updates.keys())
         query = f"UPDATE {self.table_name} SET {set_clause} WHERE {self.id_column} = ?"
@@ -145,6 +150,7 @@ class CRUDBase(Generic[T]):
         Raises:
             SQLiteQueryError: If database operation fails
         """
+
         query = f"DELETE FROM {self.table_name} WHERE {self.id_column} = ?"
         params = (id,)
 

@@ -38,6 +38,7 @@ class SQLiteInterface:
             db_path: Path to the SQLite database file
             pragmas: Dict of SQLite PRAGMA settings to apply on each connection
         """
+
         db_path.parent.mkdir(parents=True, exist_ok=True)
         self.db_path = db_path
         self.pragmas = pragmas or {}
@@ -58,6 +59,7 @@ class SQLiteInterface:
         Yields:
             An active SQLite connection with pragmas applied
         """
+
         with closing(sqlite3.connect(self.db_path)) as con, con:
             for pragma, value in self.pragmas.items():
                 con.execute(f"PRAGMA {pragma} = {value};")

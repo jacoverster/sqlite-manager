@@ -1,6 +1,18 @@
 from pathlib import Path
 import sqlite3
-from sqlite_manager.interface import DEFAULT_PRAGMAS, SQLiteInterface
+
+import pytest
+from sqlite_manager.interface import DEFAULT_PRAGMAS, RowFactory, SQLiteInterface
+
+
+@pytest.fixture
+def dict_row_factory() -> RowFactory:
+    """Fixture for creating a row factory that returns rows as dictionaries."""
+
+    def row_factory(cursor, row) -> dict:
+        return {col[0]: row[i] for i, col in enumerate(cursor.description)}
+
+    return row_factory
 
 
 def test_init_sqlite_interface(tmp_path: Path):
@@ -52,7 +64,7 @@ def test_execute_many(test_db: SQLiteInterface):
     assert ("test_value_2",) in results
 
 
-def test_fetch_one(test_db: SQLiteInterface):
+def test_fetch_one(test_db: SQLiteInterface, dict_row_factory: RowFactory):
     """Test fetching a single row from the database."""
 
     with test_db.connection() as con:
@@ -74,12 +86,12 @@ def test_fetch_one(test_db: SQLiteInterface):
     assert result["name"] == "Alice"
 
     # Test with dict factory
-    result = test_db.fetch_one(query, params, row_factory=test_db.get_dict_factory())
+    result = test_db.fetch_one(query, params, row_factory=dict_row_factory)
     assert result.get("id") == 1
     assert result.get("name") == "Alice"
 
 
-def test_fetch_all(test_db: SQLiteInterface):
+def test_fetch_all(test_db: SQLiteInterface, dict_row_factory: RowFactory):
     """Test fetching all rows from the database."""
 
     with test_db.connection() as con:
@@ -104,6 +116,6 @@ def test_fetch_all(test_db: SQLiteInterface):
     assert results[1]["name"] == "Bob"
 
     # Test with dict factory
-    results = test_db.fetch_all(query, row_factory=test_db.get_dict_factory())
+    results = test_db.fetch_all(query, row_factory=dict_row_factory)
     assert results[0].get("name") == "Alice"
     assert results[1].get("name") == "Bob"

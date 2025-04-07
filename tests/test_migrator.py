@@ -1,7 +1,7 @@
 import logging
 from pathlib import Path
 
-from pytest import TempPathFactory
+import pytest
 
 from sqlite_manager.interface import SQLiteInterface
 from sqlite_manager.migrator import SQLiteMigrator
@@ -10,6 +10,15 @@ from sqlite_manager.migrator import SQLiteMigrator
 CREATE_QUERY = "CREATE TABLE test (uid INTEGER PRIMARY KEY, name TEXT NOT NULL);"
 INVALID_QUERY = "CREATE TABLE test;"
 SELECT_QUERY = "SELECT name FROM sqlite_master WHERE type='table' AND name='test';"
+
+
+@pytest.fixture
+def test_migrator(tmp_path: Path) -> SQLiteMigrator:
+    """Fixture for creating a temporary SQLite migrator."""
+
+    return SQLiteMigrator(
+        tmp_path / "test.db", tmp_path / "migrations", tmp_path / "backups"
+    )
 
 
 def test_get_database_version(test_migrator: SQLiteMigrator):
