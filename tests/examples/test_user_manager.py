@@ -11,7 +11,7 @@ from sqlite_manager.migrator import SQLiteMigrator
 def test_user_manager(tmp_path: Path) -> Generator[UserManager, None, None]:
     """Fixture to create a temporary SQLite database for testing."""
 
-    temp_db_path = tmp_path / "test_users.sqlite"
+    temp_db_path = tmp_path / "test_users.sqlite3"
     migrations_dir = Path(__file__).parent / "migrations"
 
     sql_db = SQLiteInterface(temp_db_path)
