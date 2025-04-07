@@ -5,7 +5,7 @@ build-backend = "hatchling.build"
 [project]
 name = "sqlite-manager"
 version = "0.1.0"
-description = "Add your description here"
+description = "A lightweight, type-safe Python library for managing SQLite databases"
 readme = "README.md"
 authors = [
     { name = "Jaco Verster", email = "versterrie@gmail.com" }
@@ -13,19 +13,16 @@ authors = [
 requires-python = ">=3.11"
 dependencies = []
 
-[project.scripts]
-sqlite-manager = "sqlite_manager:main"
-
 [project.optional-dependencies]
+dev = [
+    "pytest>=8.3.5",
+    "ruff>=0.11.4",
+]
 users = [
     "bcrypt>=4.3.0",
 ]
-
-[dependency-groups]
-dev = [
-    "pytest>=8.3.5",
-    "ruff>=0.11.2",
-]
-users = [
+examples = [
     "ipykernel>=6.29.5",
+    "pydantic>=2.11.2",
 ]
+
