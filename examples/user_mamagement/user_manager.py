@@ -1,7 +1,13 @@
 import logging
 from sqlite3 import Cursor, Row
 import bcrypt
-from typing import Literal, Optional, TypedDict, cast, override
+import sys
+from typing import Literal, Optional, TypedDict, cast
+
+if sys.version_info >= (3, 12):
+    from typing import override
+else:
+    from typing_extensions import override
 import re
 
 from sqlite_manager.interface import SQLiteInterface

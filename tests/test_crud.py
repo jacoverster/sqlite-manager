@@ -2,7 +2,7 @@ import pytest
 from sqlite_manager.crud import CRUDBase
 from pathlib import Path
 from sqlite_manager.interface import SQLiteInterface, SQLiteQueryError
-from typing import TypedDict, Optional, override
+from typing import TypedDict, Optional
 
 
 @pytest.fixture

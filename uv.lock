@@ -649,10 +649,6 @@ version = "0.1.0"
 source = { editable = "." }
 
 [package.optional-dependencies]
-dev = [
-    { name = "pytest" },
-    { name = "ruff" },
-]
 examples = [
     { name = "ipykernel" },
     { name = "pydantic" },
@@ -661,15 +657,27 @@ users = [
     { name = "bcrypt" },
 ]
 
+[package.dev-dependencies]
+dev = [
+    { name = "bcrypt" },
+    { name = "pytest" },
+    { name = "ruff" },
+]
+
 [package.metadata]
 requires-dist = [
     { name = "bcrypt", marker = "extra == 'users'", specifier = ">=4.3.0" },
     { name = "ipykernel", marker = "extra == 'examples'", specifier = ">=6.29.5" },
     { name = "pydantic", marker = "extra == 'examples'", specifier = ">=2.11.2" },
-    { name = "pytest", marker = "extra == 'dev'", specifier = ">=8.3.5" },
-    { name = "ruff", marker = "extra == 'dev'", specifier = ">=0.11.4" },
 ]
-provides-extras = ["dev", "users", "examples"]
+provides-extras = ["users", "examples"]
+
+[package.metadata.requires-dev]
+dev = [
+    { name = "bcrypt", specifier = ">=4.3.0" },
+    { name = "pytest", specifier = ">=8.3.5" },
+    { name = "ruff", specifier = ">=0.11.4" },
+]
 
 [[package]]
 name = "stack-data"
