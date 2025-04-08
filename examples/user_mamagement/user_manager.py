@@ -156,7 +156,7 @@ class UserManager(CRUDBase[UserData]):
             hashed_password=bcrypt.hashpw(password.encode(), bcrypt.gensalt()),
         )
 
-    def authenticate(self, username: str, password: str) -> UserData:
+    def authenticate(self, username: str, password: str) -> UserData | None:
         """Authenticate a user with username and password.
 
         Args:

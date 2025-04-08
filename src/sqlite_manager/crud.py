@@ -36,7 +36,7 @@ class CRUDBase(Generic[T]):
         self.table_name = table_name
         self.id_column = id_column
 
-    def row_factory(self, cursor: Cursor, row: Row) -> dict[str, Any]:
+    def row_factory(self, cursor: Cursor, row: Row) -> T:
         """Convert a row from the database into a dictionary.
 
         This method can be overridden in subclasses to customize the row
@@ -50,7 +50,9 @@ class CRUDBase(Generic[T]):
             A dictionary with column names as keys
         """
 
-        return {column[0]: value for column, value in zip(cursor.description, row)}
+        return cast(
+            T, {column[0]: value for column, value in zip(cursor.description, row)}
+        )
 
     def create(self, **kwargs: Any) -> bool:
         """Create a new record in the database.
@@ -78,7 +80,7 @@ class CRUDBase(Generic[T]):
             log.error(f"Failed to insert record into {self.table_name}: {e}")
             return False
 
-    def read(self, filter: dict[str, Any]) -> dict[str, Any] | None:
+    def read(self, filter: dict[str, Any]) -> T | None:
         """Read a record from the database.
 
         Args:
@@ -101,7 +103,7 @@ class CRUDBase(Generic[T]):
 
         try:
             record = self.db.fetch_one(query, params, self.row_factory)
-            return cast(T | None, record)
+            return record
         except SQLiteQueryError as e:
             log.error(f"Failed to fetch record from {self.table_name}: {e}")
             return None
