@@ -125,13 +125,28 @@ class UserManager(CRUDBase[UserData]):
 
         return True
 
-    def create_user(self, username: str, password: str, role: str = "user") -> bool:
+    def is_empty(self) -> bool:
+        """Check if the user table is empty.
+
+        Returns:
+            True if the user table is empty, False otherwise
+        """
+
+        query = "SELECT COUNT(*) FROM users"
+        count = self.db.fetch_one(query)[0]
+
+        return count == 0
+
+    def create_user(
+        self, username: str, password: str, role: str = "user", validate: bool = True
+    ) -> bool:
         """Create a new user in the database.
 
         Args:
             username: The unique username
             password: Plain text password that will be hashed
             role: The user role (defaults to "user")
+            validate: Whether to validate username and password (default: True)
 
         Returns:
             True if user created successfully, False otherwise
@@ -141,8 +156,9 @@ class UserManager(CRUDBase[UserData]):
             ValueError: If username or password is invalid
         """
 
-        self._validate_username(username)
-        self._validate_password(password)
+        if validate:
+            self._validate_username(username)
+            self._validate_password(password)
 
         existing = self.read({"username": username})
         if existing:
