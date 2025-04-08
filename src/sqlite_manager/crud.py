@@ -36,6 +36,37 @@ class CRUDBase(Generic[T]):
         self.table_name = table_name
         self.id_column = id_column
 
+    @property
+    def is_empty(self) -> bool:
+        """Check if the table is empty.
+
+        Returns:
+            True if the table is empty, False otherwise.
+        """
+
+        query = f"SELECT COUNT(*) FROM {self.table_name}"
+        count = self.db.fetch_one(query)[0]
+
+        return count == 0
+
+    def row_factory(self, cursor: Cursor, row: Row) -> T:
+        """Convert a row from the database into a dictionary.
+
+        This method can be overridden in subclasses to customize the row
+        conversion process. The default implementation returns a dictionary.
+
+        Args:
+            cursor: The cursor object.
+            row: The row to convert.
+
+        Returns:
+            A dictionary with column names as keys.
+        """
+
+        return cast(
+            T, {column[0]: value for column, value in zip(cursor.description, row)}
+        )
+
     def filter_to_sql(
         self, filter: dict[str, Any], operator: str = "AND"
     ) -> tuple[str, tuple[Any, ...]]:
@@ -59,24 +90,6 @@ class CRUDBase(Generic[T]):
         params = tuple(filter.values())
 
         return filter_clause, params
-
-    def row_factory(self, cursor: Cursor, row: Row) -> T:
-        """Convert a row from the database into a dictionary.
-
-        This method can be overridden in subclasses to customize the row
-        conversion process. The default implementation returns a dictionary.
-
-        Args:
-            cursor: The cursor object.
-            row: The row to convert.
-
-        Returns:
-            A dictionary with column names as keys.
-        """
-
-        return cast(
-            T, {column[0]: value for column, value in zip(cursor.description, row)}
-        )
 
     def create(self, **kwargs: Any) -> bool:
         """Create a new record in the database.

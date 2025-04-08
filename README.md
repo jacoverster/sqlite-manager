@@ -206,8 +206,8 @@ migrator.migrate()
 user_manager = UserManager(db)
 
 # Create users
-user_manager.create_user("admin", "SecureP@ss123", role="admin")
-user_manager.create_user("user", "UserP@ss456")
+user_manager.create("admin", "SecureP@ss123", role="admin")
+user_manager.create("user", "UserP@ss456")
 
 # Authenticate
 user = user_manager.authenticate("admin", "SecureP@ss123")

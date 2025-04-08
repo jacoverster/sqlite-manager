@@ -74,6 +74,33 @@ def test_crud_initialization(test_db: SQLiteInterface):
     assert crud_custom.id_column == "custom_id"
 
 
+def test_is_empty(test_crud_handler: CRUDBase):
+    """Test the is_empty property of CRUDBase."""
+
+    # Initially, the table should not be empty
+    assert test_crud_handler.is_empty is False
+
+    # Delete all records to make it empty
+    test_crud_handler.db.execute_sql("DELETE FROM test_items")
+
+    # Now it should be empty
+    assert test_crud_handler.is_empty is True
+
+
+def test_row_factory(test_crud_handler: CRUDBase, test_db: SQLiteInterface):
+    """Test the default row_factory method."""
+
+    with test_db.connection() as conn:
+        cursor = conn.cursor()
+        cursor.execute("SELECT * FROM test_items WHERE name = 'item1'")
+        row = cursor.fetchone()
+
+        result = test_crud_handler.row_factory(cursor, row)
+
+        assert result["name"] == "item1"
+        assert result["value"] == 100
+
+
 def test_filter_to_sql(test_crud_handler: CRUDBase):
     """Test the filter_to_sql method for generating WHERE clauses."""
 
@@ -114,20 +141,6 @@ def test_filter_to_sql(test_crud_handler: CRUDBase):
     # Test that empty filter raises ValueError
     with pytest.raises(ValueError, match="Filter cannot be empty"):
         test_crud_handler.filter_to_sql({})
-
-
-def test_row_factory(test_crud_handler: CRUDBase, test_db: SQLiteInterface):
-    """Test the default row_factory method."""
-
-    with test_db.connection() as conn:
-        cursor = conn.cursor()
-        cursor.execute("SELECT * FROM test_items WHERE name = 'item1'")
-        row = cursor.fetchone()
-
-        result = test_crud_handler.row_factory(cursor, row)
-
-        assert result["name"] == "item1"
-        assert result["value"] == 100
 
 
 def test_create_and_read(test_crud_handler: CRUDBase):

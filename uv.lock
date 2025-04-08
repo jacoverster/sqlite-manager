@@ -647,6 +647,9 @@ wheels = [
 name = "sqlite-manager"
 version = "0.1.0"
 source = { editable = "." }
+dependencies = [
+    { name = "typing-extensions", marker = "python_full_version < '3.12'" },
+]
 
 [package.optional-dependencies]
 dev = [
@@ -670,6 +673,7 @@ requires-dist = [
     { name = "pydantic", marker = "extra == 'examples'", specifier = ">=2.11.2" },
     { name = "pytest", marker = "extra == 'dev'", specifier = ">=8.3.5" },
     { name = "ruff", marker = "extra == 'dev'", specifier = ">=0.11.4" },
+    { name = "typing-extensions", marker = "python_full_version < '3.12'", specifier = ">=4.0.0" },
 ]
 provides-extras = ["dev", "users", "examples"]
 

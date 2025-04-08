@@ -58,25 +58,6 @@ class UserManager(CRUDBase[UserData]):
 
         super().__init__(sql_db, "users", "user_id")
 
-    @override
-    def row_factory(self, cursor: Cursor, row: Row) -> UserData:
-        """Convert a row from the database into a UserData dictionary.
-
-        Args:
-            cursor: The database cursor.
-            row: The database row.
-
-        Returns:
-            UserData dictionary with typed fields.
-        """
-
-        row_fields = (column[0] for column in cursor.description)
-        row_dict = {key: value for key, value in zip(row_fields, row)}
-        annotations = UserData.__annotations__
-        user_data = {k: v for k, v in row_dict.items() if k in annotations}
-
-        return cast(UserData, user_data)
-
     def _validate_username(self, username: str) -> bool:
         """Returns True if username matches the pattern, False otherwise."""
 
@@ -111,15 +92,27 @@ class UserManager(CRUDBase[UserData]):
 
         return True
 
-    def is_empty(self) -> bool:
-        """Returns True if the user table is empty, False otherwise."""
+    @override
+    def row_factory(self, cursor: Cursor, row: Row) -> UserData:
+        """Convert a row from the database into a UserData dictionary.
 
-        query = "SELECT COUNT(*) FROM users"
-        count = self.db.fetch_one(query)[0]
+        Args:
+            cursor: The database cursor.
+            row: The database row.
 
-        return count == 0
+        Returns:
+            UserData dictionary with typed fields.
+        """
 
-    def create_user(
+        row_fields = (column[0] for column in cursor.description)
+        row_dict = {key: value for key, value in zip(row_fields, row)}
+        annotations = UserData.__annotations__
+        user_data = {k: v for k, v in row_dict.items() if k in annotations}
+
+        return cast(UserData, user_data)
+
+    @override
+    def create(
         self, username: str, password: str, role: str = "user", validate: bool = True
     ) -> bool:
         """Create a new user in the database.
@@ -148,11 +141,64 @@ class UserManager(CRUDBase[UserData]):
                 f"Failed to create user, '{username}' already exists"
             )
 
-        return self.create(
+        return super().create(
             username=username,
             role=role,
             hashed_password=bcrypt.hashpw(password.encode(), bcrypt.gensalt()),
         )
+
+    @override
+    def update(
+        self,
+        filter: dict[str, Any],
+        updates: dict[str, Any],
+        filter_operator: str = "AND",
+        validate: bool = True,
+    ) -> bool:
+        """Update user data.
+
+        Args:
+            filter: Dictionary of column-value pairs to filter by.
+            updates: Dictionary of column-value pairs to update.
+            filter_operator: Logical operator to use (AND/OR).
+            validate: Whether to validate username and password (default: True).
+
+        Returns:
+            True if update was successful, False otherwise.
+
+        Raises:
+            UserExistsError: If new username already exists.
+            ValueError: If new username or password is invalid.
+        """
+
+        if not updates:
+            raise ValueError("No updates provided")
+
+        if username := updates.get("username"):
+            if validate:
+                self._validate_username(username)
+            existing = self.read({"username": username})
+            if existing:
+                raise UserManagerError(
+                    f"Cannot update username to '{username}', user already exists"
+                )
+
+        if password := updates.get("password"):
+            if validate:
+                self._validate_password(password)
+            del updates["password"]
+            updates["hashed_password"] = bcrypt.hashpw(
+                password.encode(), bcrypt.gensalt()
+            )
+
+        return super().update(filter, updates, filter_operator)
+
+    def list_users(self) -> list[UserData]:
+        """Returns a list of user data dictionaries"""
+
+        query = query = "SELECT * FROM users ORDER BY username"
+
+        return self.db.fetch_all(query, row_factory=self.row_factory)
 
     def authenticate(self, username: str, password: str) -> UserData | None:
         """Authenticate a user with username and password.
@@ -184,54 +230,3 @@ class UserManager(CRUDBase[UserData]):
 
         log.warning(f"Authentication failed for '{username}'")
         return None
-
-    def list_users(self) -> list[UserData]:
-        """Returns a list of user data dictionaries"""
-
-        query = query = "SELECT * FROM users ORDER BY username"
-
-        return self.db.fetch_all(query, row_factory=self.row_factory)
-
-    def update_user(
-        self,
-        filter: dict[str, Any],
-        updates: dict[str, Any],
-        filter_operator: str = "AND",
-        validate: bool = True,
-    ) -> bool:
-        """Update user data.
-
-        Args:
-            filter: Dictionary of column-value pairs to filter by.
-            updates: Dictionary of column-value pairs to update.
-            filter_operator: Logical operator to use (AND/OR).
-            validate: Whether to validate username and password (default: True).
-
-        Returns:
-            True if update was successful, False otherwise.
-
-        Raises:
-            UserExistsError: If new username already exists.
-            ValueError: If new username or password is invalid.
-        """
-
-        if not updates:
-            raise ValueError("No updates provided")
-
-        if username := updates.get("username") is not None:
-            if validate:
-                self._validate_username(username)
-            existing = self.read({"username": username})
-            if existing:
-                raise UserManagerError(
-                    f"Cannot update username to '{username}', user already exists"
-                )
-
-        if password := updates.get("password") is not None:
-            if validate:
-                self._validate_password(password)
-            updates["hashed_password"] = bcrypt.hashpw(
-                password.encode(), bcrypt.gensalt()
-            )
-
-        return self.update(filter, updates, filter_operator)
