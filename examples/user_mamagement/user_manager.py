@@ -259,4 +259,4 @@ class UserManager(CRUDBase[UserData]):
         if not updates:
             raise ValueError("No updates provided")
 
-        return self.update(user_id, updates)
+        return self.update({"user_id": user_id}, updates)

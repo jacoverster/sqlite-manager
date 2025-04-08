@@ -23,9 +23,9 @@ def test_db(tmp_path: Path) -> SQLiteInterface:
     """
     )
     # Insert some sample data
-    interface.execute_sql(
-        "INSERT INTO test_items (name, value) VALUES (?, ?), (?, ?)",
-        ("item1", 100, "item2", 200),
+    interface.execute_many(
+        "INSERT INTO test_items (name, value) VALUES (?, ?)",
+        [("item1", 100), ("item2", 200)],
     )
     return interface
 
@@ -72,6 +72,48 @@ def test_crud_initialization(test_db: SQLiteInterface):
     crud_custom = CRUDBase(test_db, "test_items", id_column="custom_id")
     assert crud_custom.table_name == "test_items"
     assert crud_custom.id_column == "custom_id"
+
+
+def test_filter_to_sql(test_crud_handler: CRUDBase):
+    """Test the filter_to_sql method for generating WHERE clauses."""
+
+    # Test basic single filter
+    filter_clause, params = test_crud_handler.filter_to_sql({"name": "item1"})
+    assert filter_clause == "name = ?"
+    assert params == ("item1",)
+
+    # Test multiple filters with default AND operator
+    filter_clause, params = test_crud_handler.filter_to_sql(
+        {"name": "item1", "value": 100}
+    )
+    # Since dictionaries don't guarantee order, check both possibilities
+    assert "name = ?" in filter_clause and "value = ?" in filter_clause
+    assert "AND" in filter_clause
+    assert len(params) == 2
+    assert set(params) == {"item1", 100}
+
+    # Test multiple filters with OR operator
+    filter_clause, params = test_crud_handler.filter_to_sql(
+        {"name": "item1", "value": 100}, operator="OR"
+    )
+    assert "name = ?" in filter_clause and "value = ?" in filter_clause
+    assert "OR" in filter_clause
+    assert len(params) == 2
+    assert set(params) == {"item1", 100}
+
+    # Test with different value types
+    filter_dict = {"name": "test", "active": True, "count": 5}
+    filter_clause, params = test_crud_handler.filter_to_sql(filter_dict)
+    for key in filter_dict.keys():
+        assert f"{key} = ?" in filter_clause
+    assert len(params) == 3
+    assert "test" in params
+    assert True in params
+    assert 5 in params
+
+    # Test that empty filter raises ValueError
+    with pytest.raises(ValueError, match="Filter cannot be empty"):
+        test_crud_handler.filter_to_sql({})
 
 
 def test_row_factory(test_crud_handler: CRUDBase, test_db: SQLiteInterface):
@@ -123,7 +165,7 @@ def test_update(test_crud_handler: CRUDBase):
     assert record is not None
 
     # Update the record
-    success = test_crud_handler.update(record["uid"], {"value": 999})
+    success = test_crud_handler.update({"uid": record["uid"]}, {"value": 999})
     assert success is True
 
     # Verify the update
@@ -134,7 +176,7 @@ def test_update(test_crud_handler: CRUDBase):
 def test_update_nonexistent(test_crud_handler: CRUDBase):
     """Test updating a nonexistent record returns False."""
 
-    success = test_crud_handler.update(999, {"value": 999})
+    success = test_crud_handler.update({"uid": 999}, {"value": 999})
     assert success is False
 
 
@@ -146,7 +188,7 @@ def test_delete(test_crud_handler: CRUDBase):
     assert record is not None
 
     # Delete the record
-    success = test_crud_handler.delete(record["uid"])
+    success = test_crud_handler.delete({"name": "item2"})
     assert success is True
 
     # Verify the deletion
@@ -157,7 +199,7 @@ def test_delete(test_crud_handler: CRUDBase):
 def test_delete_nonexistent(test_crud_handler: CRUDBase):
     """Test deleting a nonexistent record returns False."""
 
-    success = test_crud_handler.delete(999)
+    success = test_crud_handler.delete({"uid": 999})
     assert success is False
 
 

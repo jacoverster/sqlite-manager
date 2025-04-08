@@ -82,10 +82,10 @@ items_crud.create(name="New Item", value=123)
 item = items_crud.read({"name": "New Item"})
 
 # Update a record
-items_crud.update(item["item_id"], {"value": 456})
+items_crud.update({"name": "New Item"}, {"value": 456})
 
 # Delete a record
-items_crud.delete(item["item_id"])
+items_crud.delete({"item_id": item["item_id"]})
 ```
 
 ### Database Migrations

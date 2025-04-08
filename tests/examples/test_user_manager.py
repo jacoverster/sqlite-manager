@@ -143,7 +143,9 @@ def test_update_user(test_user_manager: UserManager):
 def test_update_user_invalid_id(test_user_manager: UserManager):
     """Test updating a user with an invalid ID raises an error."""
 
-    updated = test_user_manager.update(999, {"username": "nonexistentuser"})
+    updated = test_user_manager.update(
+        {"user_id": 999}, {"username": "nonexistentuser"}
+    )
 
     assert updated is False
 
@@ -152,7 +154,7 @@ def test_delete_user(test_user_manager: UserManager):
     """Test deleting a user."""
 
     test_user_manager.create_user("deleteuser", "Pass123!")
-    deleted = test_user_manager.delete(1)
+    deleted = test_user_manager.delete({"user_id": 1})
     user = test_user_manager.read({"username": "deleteuser"})
 
     assert deleted is True
@@ -162,7 +164,7 @@ def test_delete_user(test_user_manager: UserManager):
 def test_delete_user_invalid_id(test_user_manager: UserManager):
     """Test deleting a user with an invalid ID raises an error."""
 
-    deleted = test_user_manager.delete(999)
+    deleted = test_user_manager.delete({"user_id": 999})
 
     assert deleted is False
 
