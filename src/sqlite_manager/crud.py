@@ -16,9 +16,9 @@ class CRUDBase(Generic[T]):
     with configurable table name and primary key column.
 
     Attributes:
-        db: The SQLiteInterface instance to use for database operations
-        table_name: The name of the table this CRUD handler manages
-        id_column: The name of the primary key column (defaults to "uid")
+        db: The SQLiteInterface instance to use for database operations.
+        table_name: The name of the table this CRUD handler manages.
+        id_column: The name of the primary key column (defaults to "uid").
     """
 
     def __init__(
@@ -27,9 +27,9 @@ class CRUDBase(Generic[T]):
         """Initialize the CRUD base with database connection.
 
         Args:
-            sql_db: The SQLite interface to use
-            table_name: Name of the table to operate on
-            id_column: Name of the primary key column
+            sql_db: The SQLite interface to use.
+            table_name: Name of the table to operate on.
+            id_column: Name of the primary key column.
         """
 
         self.db = sql_db
@@ -42,12 +42,14 @@ class CRUDBase(Generic[T]):
         """Convert a filter dictionary to SQL WHERE clause and parameters.
 
         Args:
-            filter: Dictionary of column-value pairs to filter by
-            operator: Logical operator to use (AND/OR)
+            filter: Dictionary of column-value pairs to filter by.
+            operator: Logical operator to use (AND/OR).
+
         Returns:
-            A tuple containing the SQL WHERE clause and parameters
+            A tuple containing the SQL WHERE clause and parameters.
+
         Raises:
-            ValueError: If filter is empty
+            ValueError: If filter is empty.
         """
 
         if not filter:
@@ -65,11 +67,11 @@ class CRUDBase(Generic[T]):
         conversion process. The default implementation returns a dictionary.
 
         Args:
-            cursor: The cursor object
-            row: The row to convert
+            cursor: The cursor object.
+            row: The row to convert.
 
         Returns:
-            A dictionary with column names as keys
+            A dictionary with column names as keys.
         """
 
         return cast(
@@ -86,7 +88,7 @@ class CRUDBase(Generic[T]):
             True if record created successfully, False otherwise.
 
         Raises:
-            SQLiteQueryError: If database operation fails
+            SQLiteQueryError: If database operation fails.
         """
 
         columns = ", ".join(kwargs.keys())
@@ -106,14 +108,14 @@ class CRUDBase(Generic[T]):
         """Read a record from the database.
 
         Args:
-            filter: Dictionary of column-value pairs to filter by
+            filter: Dictionary of column-value pairs to filter by.
 
         Returns:
             The record as a dictionary or None if not found.
 
         Raises:
-            ValueError: If filter is empty
-            SQLiteQueryError: If database operation fails
+            ValueError: If filter is empty.
+            SQLiteQueryError: If database operation fails.
         """
 
         filter_clause, params = self.filter_to_sql(filter, filter_operator)
@@ -135,15 +137,16 @@ class CRUDBase(Generic[T]):
         """Update records in the database that match the filter.
 
         Args:
-            filter: Dictionary of column-value pairs to filter by
+            filter: Dictionary of column-value pairs to filter by.
             updates: Dictionary of column-value pairs to update.
+            filter_operator: Logical operator to use (AND/OR).
 
         Returns:
             True if records updated successfully, False otherwise.
 
         Raises:
-            ValueError: If filter is empty
-            SQLiteQueryError: If database operation fails
+            ValueError: If filter is empty.
+            SQLiteQueryError: If database operation fails.
         """
 
         if not updates:
@@ -171,14 +174,15 @@ class CRUDBase(Generic[T]):
         """Delete records from the database that match the filter.
 
         Args:
-            filter: Dictionary of column-value pairs to filter by
+            filter: Dictionary of column-value pairs to filter by.
+            filter_operator: Logical operator to use (AND/OR).
 
         Returns:
             True if records deleted successfully, False otherwise.
 
         Raises:
-            ValueError: If filter is empty
-            SQLiteQueryError: If database operation fails
+            ValueError: If filter is empty.
+            SQLiteQueryError: If database operation fails.
         """
 
         filter_clause, params = self.filter_to_sql(filter, filter_operator)

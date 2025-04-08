@@ -35,8 +35,8 @@ class SQLiteInterface:
         """Initializes the SQLite interface with the given database path and pragmas.
 
         Args:
-            db_path: Path to the SQLite database file
-            pragmas: Dict of SQLite PRAGMA settings to apply on each connection
+            db_path: Path to the SQLite database file.
+            pragmas: Dict of SQLite PRAGMA settings to apply on each connection.
         """
 
         db_path.parent.mkdir(parents=True, exist_ok=True)
@@ -54,10 +54,10 @@ class SQLiteInterface:
         If a row_factory is provided, it is used to convert rows to the desired format.
 
         Args:
-            row_factory: Optional callable that converts rows to desired format
+            row_factory: Optional callable that converts rows to desired format.
 
         Yields:
-            An active SQLite connection with pragmas applied
+            An active SQLite connection with pragmas applied.
         """
 
         with closing(sqlite3.connect(self.db_path)) as con, con:
@@ -73,14 +73,14 @@ class SQLiteInterface:
         """Executes a SQL query and returns the number of changes if requested.
 
         Args:
-            query: SQL query to execute
-            params:  Optional parameters to bind to the query
+            query: SQL query to execute.
+            params:  Optional parameters to bind to the query.
 
         Returns:
-            Number of applied changes
+            Number of applied changes.
 
         Raises:
-            SQLiteQueryError: If the query execution fails
+            SQLiteQueryError: If the query execution fails.
         """
 
         try:
@@ -97,14 +97,14 @@ class SQLiteInterface:
         """Executes a SQL query with multiple parameter sets.
 
         Args:
-            query: SQL query to execute
-            params: List of parameter sets to bind to the query
+            query: SQL query to execute.
+            params: List of parameter sets to bind to the query.
 
         Returns:
-            Number of applied changes
+            Number of applied changes.
 
         Raises:
-            SQLiteQueryError: If the query execution fails
+            SQLiteQueryError: If the query execution fails.
         """
 
         try:
@@ -124,12 +124,12 @@ class SQLiteInterface:
         """Fetches a single row from the database.
 
         Args:
-            query: SQL query to execute
-            params:  Optional parameters to bind to the query
-            row_factory: Optional callable that converts rows to desired format
+            query: SQL query to execute.
+            params:  Optional parameters to bind to the query.
+            row_factory: Optional callable that converts rows to desired format.
 
         Returns:
-            A single row in the format specified by row_factory, or None if no results
+            A single row in the format specified by row_factory, or None if no results.
         """
 
         with self.connection(row_factory) as con:
@@ -144,12 +144,12 @@ class SQLiteInterface:
         """Fetches all rows from the database.
 
         Args:
-            query: SQL query to execute
-            params:  Optional parameters to bind to the query
-            row_factory: Optional callable that converts rows to desired format
+            query: SQL query to execute.
+            params:  Optional parameters to bind to the query.
+            row_factory: Optional callable that converts rows to desired format.
 
         Returns:
-            A list of rows in the format specified by row_factory, or None if no results
+            A list of rows in the format specified by row_factory, or None if no results.
         """
 
         with self.connection(row_factory) as con:

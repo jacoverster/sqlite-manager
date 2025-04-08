@@ -32,9 +32,9 @@ class SQLiteMigrator:
         """Initializes the SQLite migrator.
 
         Args:
-            sql_db: SQLite interface
-            migrations_dir: path to directory with migration files
-            backup_dir: path to directory to store backups
+            sql_db: SQLite interface.
+            migrations_dir: path to directory with migration files.
+            backup_dir: path to directory to store backups.
         """
 
         migrations_dir.mkdir(parents=True, exist_ok=True)
@@ -71,7 +71,7 @@ class SQLiteMigrator:
         """Creates a backup of the SQLite database.
 
         Args:
-            backup_path: Path to the backup file
+            backup_path: Path to the backup file.
         """
 
         self.db.execute_sql("VACUUM main INTO ?", (backup_path.as_posix(),))
@@ -80,10 +80,10 @@ class SQLiteMigrator:
         """Restores the database to the given backup.
 
         Args:
-            backup_path: Path to the backup file
+            backup_path: Path to the backup file.
 
         Returns:
-            bool: True if the database was successfully restored, False otherwise
+            True if the database was successfully restored, False otherwise.
         """
 
         database_version = self.get_database_version()
@@ -171,7 +171,7 @@ class SQLiteMigrator:
         """Writes the schema.sql file to the migrations directory.
 
         Args:
-            version: integer schema version number
+            version: integer schema version number.
         """
 
         latest_schema_path = self.migrations_dir / f"schema_v{version}.sql"
