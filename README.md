@@ -2,21 +2,19 @@
 
 A lightweight, type-safe Python library for managing SQLite databases with migrations and CRUD operations.
 
-[![PyPI version](https://img.shields.io/pypi/v/sqlite-manager.svg)](https://pypi.org/project/sqlite-manager/)
-[![Python versions](https://img.shields.io/pypi/pyversions/sqlite-manager.svg)](https://pypi.org/project/sqlite-manager/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
 ## Features
 
-- **Zero-dependency** and lightweight implementation.
-- **Type-safe interface** with full typing support for modern Python development
-- **Database migrations** for versioned database schema management
-- **CRUD abstraction** to simplify database operations
-- **Robust error handling** for all database operations
-- **Flexible row factories** to control how database rows are returned
-- **Optional Pydantic integration** for model validation and serialization
-- **Optimized SQLite configuration** with sensible defaults
-- **Example integrations** including a fully-featured user management system
+-   **Zero-dependency** and lightweight implementation.
+-   **Type-safe interface** with full typing support for modern Python development
+-   **Database migrations** for versioned database schema management
+-   **CRUD abstraction** to simplify database operations
+-   **Robust error handling** for all database operations
+-   **Flexible row factories** to control how database rows are returned
+-   **Optional Pydantic integration** for model validation and serialization
+-   **Optimized SQLite configuration** with sensible defaults
+-   **Example integrations** including a fully-featured user management system
 
 ## Installation
 
@@ -32,12 +30,12 @@ With uv (recommended for faster, more reliable dependency resolution):
 uv pip install sqlite-manager
 ```
 
-For user management functionality (includes bcrypt dependency):
+To run the examples install the optional dependencies:
 
 ```bash
-pip install "sqlite-manager[users]"
+pip install "sqlite-manager[examples]"
 # Or with uv
-uv pip install "sqlite-manager[users]"
+uv pip install "sqlite-manager[examples]"
 ```
 
 ## Quick Start
@@ -94,7 +92,7 @@ A database migrator for SQLite databases. A migrations table is created to versi
 
 Migrations are SQL scripts that are executed in order to update the database schema.
 SQL scripts are stored in the migrations directory and should be named starting with
-migration_ and a number, for eg. migration_0001.sql.
+migration\_ and a number, for eg. migration_0001.sql.
 
 The migrator will execute migration scripts with a version number greater than the
 current database version in numeric order. A backup of the database is created before migration and is stored in the backups directory.
@@ -185,7 +183,6 @@ pip install "sqlite-manager[examples]"
 
 See the [example notebook](examples/user_mamagement/user_manager_example.ipynb) for a complete demonstration.
 
-
 The package includes a complete user management system example:
 
 ```python
@@ -270,7 +267,6 @@ product_crud.create(**new_product.model_dump(exclude_unset=True))
 product: Product = product_crud.read({"product_id": 1})  # Returns a Product instance
 print(product)
 ```
-
 
 ## Project Structure
 
