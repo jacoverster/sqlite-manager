@@ -12,10 +12,29 @@ log = logging.getLogger(__name__)
 T = TypeVar("T", bound=tuple | dict)
 RowFactory = Callable[[Cursor, Row], T]
 
+# Default SQLite PRAGMA settings for the database connection.
+# These settings are chosen to balance performance and safety for web applications.
 DEFAULT_PRAGMAS = {
+    # Journal mode WAL allows for greater concurrency (many readers + one writer)
+    # https://www.sqlite.org/pragma.html#pragma_journal_mode
     "journal_mode": "WAL",
+    # Level of database durability, "NORMAL" (sync every 1000 written pages)
+    # https://www.sqlite.org/pragma.html#pragma_synchronous
     "synchronous": "NORMAL",
+    # Enforce foreign key constraints
+    # https://www.sqlite.org/pragma.html#pragma_foreign_keys
     "foreign_keys": "ON",
+    # Impose a limit on the WAL file to prevent unlimited growth (64MB)
+    # https://www.sqlite.org/pragma.html#pragma_journal_size_limit
+    "journal_size_limit": 67108864,
+    # Set the global memory map size for potential performance gains (128MB)
+    # https://www.sqlite.org/pragma.html#pragma_mmap_size
+    "mmap_size": 134217728,
+    # Increase the local connection page cache size
+    # https://www.sqlite.org/pragma.html#pragma_cache_size
+    "cache_size": 2000,
+    # Allowed waiting time (in milliseconds) before raising an exception
+    # https://www.sqlite.org/pragma.html#pragma_busy_timeout
     "busy_timeout": 5000,
 }
 
