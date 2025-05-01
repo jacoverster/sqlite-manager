@@ -6,36 +6,28 @@ A lightweight, type-safe Python library for managing SQLite databases with migra
 
 ## Features
 
--   **Zero-dependency** and lightweight implementation.
--   **Type-safe interface** with full typing support for modern Python development
--   **Database migrations** for versioned database schema management
--   **CRUD abstraction** to simplify database operations
--   **Robust error handling** for all database operations
--   **Flexible row factories** to control how database rows are returned
--   **Optional Pydantic integration** for model validation and serialization
--   **Optimized SQLite configuration** with sensible defaults
--   **Example integrations** including a fully-featured user management system
+-   **Zero-dependency** lightweight implementation.
+-   **Type-safe interface** with full typing support for modern Python development.
+-   **Database migrations** for versioned database schema management.
+-   **CRUD abstraction** to simplify database operations.
+-   **Robust error handling** for all database operations.
+-   **Flexible row factories** to control how database rows are returned.
+-   **Optional Pydantic integration** for model validation and serialization.
+-   **Optimized SQLite configuration** with sensible defaults.
+-   **Example integrations** including a fully-featured user management system.
 
 ## Installation
 
 With pip:
 
 ```bash
-pip install sqlite-manager
-```
-
-With uv (recommended for faster, more reliable dependency resolution):
-
-```bash
-uv pip install sqlite-manager
+pip install "git+https://@github.com/jacoverster/sqlite-manager"
 ```
 
 To run the examples install the optional dependencies:
 
 ```bash
-pip install "sqlite-manager[examples]"
-# Or with uv
-uv pip install "sqlite-manager[examples]"
+pip install "git+https://@github.com/jacoverster/sqlite-manager[examples]"
 ```
 
 ## Quick Start
