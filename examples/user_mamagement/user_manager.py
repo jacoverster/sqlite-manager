@@ -1,5 +1,5 @@
 import logging
-from sqlite3 import Cursor, Row
+from sqlite3 import Cursor
 import bcrypt
 import sys
 from typing import Any, Literal, Optional, TypedDict, cast
@@ -58,16 +58,16 @@ class UserManager(CRUDBase[UserData]):
 
         super().__init__(sql_db, "users", "user_id")
 
-    def _validate_username(self, username: str) -> bool:
-        """Returns True if username matches the pattern, False otherwise."""
+    def _validate_username(self, username: str) -> None:
+        """Raises ValueError if username does not match the pattern."""
 
         if not self.USERNAME_PATTERN.match(username):
             raise ValueError(
                 "Invalid username format: must be 3-30 alphanumeric characters or underscores"
             )
 
-    def _validate_password(self, password: str) -> bool:
-        """Returns True if password meets the requirements, False otherwise."""
+    def _validate_password(self, password: str) -> None:
+        """Raises ValueError if password does not meet the requirements."""
 
         if len(password) < self.MIN_PASSWORD_LENGTH:
             raise ValueError(
@@ -90,10 +90,8 @@ class UserManager(CRUDBase[UserData]):
         if not has_special:
             raise ValueError("Password must contain at least one special character")
 
-        return True
-
     @override
-    def row_factory(self, cursor: Cursor, row: Row) -> UserData:
+    def row_factory(self, cursor: Cursor, row: tuple[Any, ...]) -> UserData:
         """Convert a row from the database into a UserData dictionary.
 
         Args:
@@ -111,8 +109,7 @@ class UserManager(CRUDBase[UserData]):
 
         return cast(UserData, user_data)
 
-    @override
-    def create(
+    def create_user(
         self, username: str, password: str, role: str = "user", validate: bool = True
     ) -> bool:
         """Create a new user in the database.
@@ -144,7 +141,7 @@ class UserManager(CRUDBase[UserData]):
         return super().create(
             username=username,
             role=role,
-            hashed_password=bcrypt.hashpw(password.encode(), bcrypt.gensalt()),
+            hashed_password=bcrypt.hashpw(password.encode(), bcrypt.gensalt()).decode(),
         )
 
     @override
@@ -189,16 +186,19 @@ class UserManager(CRUDBase[UserData]):
             del updates["password"]
             updates["hashed_password"] = bcrypt.hashpw(
                 password.encode(), bcrypt.gensalt()
-            )
+            ).decode()
 
         return super().update(filter, updates, filter_operator)
 
     def list_users(self) -> list[UserData]:
-        """Returns a list of user data dictionaries"""
+        """Returns a list of user data dictionaries."""
 
-        query = query = "SELECT * FROM users ORDER BY username"
+        query = "SELECT * FROM users ORDER BY username"
 
-        return self.db.fetch_all(query, row_factory=self.row_factory)
+        return cast(
+            list[UserData],
+            self.db.fetch_all(query, row_factory=self.row_factory),
+        )
 
     def authenticate(self, username: str, password: str) -> UserData | None:
         """Authenticate a user with username and password.
@@ -222,7 +222,7 @@ class UserManager(CRUDBase[UserData]):
             )
             return None
 
-        if bcrypt.checkpw(password.encode(), user["hashed_password"]):
+        if bcrypt.checkpw(password.encode(), user["hashed_password"].encode()):
             query = "UPDATE users SET last_login = CURRENT_TIMESTAMP WHERE user_id = ?"
             self.db.execute_sql(query, (user["user_id"],))
             log.info(f"User authenticated: {username}")
