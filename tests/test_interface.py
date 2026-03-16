@@ -59,7 +59,6 @@ def test_execute_many(test_db: SQLiteInterface):
 
     # Check that the rows exist
     results = test_db.fetch_all("SELECT * FROM test_table")
-    assert results is not None
     assert len(results) == 2
     assert ("test_value_1",) in results
     assert ("test_value_2",) in results
@@ -108,14 +107,12 @@ def test_fetch_all(test_db: SQLiteInterface, dict_row_factory: RowFactory):
     query = "SELECT * FROM users"
 
     results = test_db.fetch_all(query)
-    assert results is not None
     assert len(results) == 2
     assert results[0][1] == "Alice"
     assert results[1][1] == "Bob"
 
     # Test with sqlite.Row factory
     results = test_db.fetch_all(query, row_factory=sqlite3.Row)
-    assert results is not None
     assert results[0]["id"] == 1
     assert results[0]["name"] == "Alice"
     assert results[1]["id"] == 2
@@ -123,6 +120,5 @@ def test_fetch_all(test_db: SQLiteInterface, dict_row_factory: RowFactory):
 
     # Test with dict factory
     results = test_db.fetch_all(query, row_factory=dict_row_factory)
-    assert results is not None
     assert results[0].get("name") == "Alice"
     assert results[1].get("name") == "Bob"

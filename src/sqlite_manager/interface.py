@@ -75,7 +75,7 @@ class SQLiteInterface:
     def connection(
         self, row_factory: RowFactory[Any] | None = None
     ) -> Generator[sqlite3.Connection, None, None]:
-        """Returns a connection to the SQLite database wih applied pragmas.
+        """Returns a connection to the SQLite database with applied pragmas.
 
         Commits the transaction if no exceptions occur. The connection is closed
         automatically after use. If an exception occurs, the connection is rolled back.
@@ -183,7 +183,7 @@ class SQLiteInterface:
         query: str,
         params: Params | None = ...,
         row_factory: None = ...,
-    ) -> list[tuple] | None: ...
+    ) -> list[tuple]: ...
 
     @overload
     def fetch_all(
@@ -191,14 +191,14 @@ class SQLiteInterface:
         query: str,
         params: Params | None = ...,
         row_factory: RowFactory[T] = ...,
-    ) -> list[T] | None: ...
+    ) -> list[T]: ...
 
     def fetch_all(
         self,
         query: str,
         params: Params | None = None,
         row_factory: RowFactory[T] | None = None,
-    ) -> list[T] | list[tuple] | None:
+    ) -> list[T] | list[tuple]:
         """Fetches all rows from the database.
 
         Args:
@@ -207,7 +207,7 @@ class SQLiteInterface:
             row_factory: Optional callable that converts rows to desired format.
 
         Returns:
-            A list of rows in the format specified by row_factory, or None if no results.
+            A (possibly empty) list of rows in the format specified by row_factory.
         """
 
         with self.connection(row_factory) as con:
