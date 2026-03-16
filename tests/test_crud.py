@@ -183,6 +183,7 @@ def test_update(test_crud_handler: CRUDBase):
 
     # Verify the update
     updated = test_crud_handler.read({"name": "item1"})
+    assert updated is not None
     assert updated["value"] == 999
 
 

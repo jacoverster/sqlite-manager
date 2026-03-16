@@ -1,6 +1,6 @@
 import logging
-from sqlite3 import Cursor, Row
-import bcrypt
+from sqlite3 import Cursor
+import bcrypt  # type: ignore[import-untyped]
 import sys
 from typing import Any, Literal, Optional, TypedDict, cast
 
@@ -58,7 +58,7 @@ class UserManager(CRUDBase[UserData]):
 
         super().__init__(sql_db, "users", "user_id")
 
-    def _validate_username(self, username: str) -> bool:
+    def _validate_username(self, username: str) -> None:
         """Returns True if username matches the pattern, False otherwise."""
 
         if not self.USERNAME_PATTERN.match(username):
@@ -93,7 +93,7 @@ class UserManager(CRUDBase[UserData]):
         return True
 
     @override
-    def row_factory(self, cursor: Cursor, row: Row) -> UserData:
+    def row_factory(self, cursor: Cursor, row: tuple[Any, ...]) -> UserData:
         """Convert a row from the database into a UserData dictionary.
 
         Args:
@@ -112,7 +112,7 @@ class UserManager(CRUDBase[UserData]):
         return cast(UserData, user_data)
 
     @override
-    def create(
+    def create(  # type: ignore[override]
         self, username: str, password: str, role: str = "user", validate: bool = True
     ) -> bool:
         """Create a new user in the database.
@@ -194,11 +194,14 @@ class UserManager(CRUDBase[UserData]):
         return super().update(filter, updates, filter_operator)
 
     def list_users(self) -> list[UserData]:
-        """Returns a list of user data dictionaries"""
+        """Returns a list of user data dictionaries."""
 
-        query = query = "SELECT * FROM users ORDER BY username"
+        query = "SELECT * FROM users ORDER BY username"
 
-        return self.db.fetch_all(query, row_factory=self.row_factory)
+        return cast(
+            list[UserData],
+            self.db.fetch_all(query, row_factory=self.row_factory),
+        )
 
     def authenticate(self, username: str, password: str) -> UserData | None:
         """Authenticate a user with username and password.

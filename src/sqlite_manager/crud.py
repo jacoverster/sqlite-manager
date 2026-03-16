@@ -1,12 +1,13 @@
 import logging
-from sqlite3 import Cursor, Row
+from collections.abc import Mapping
+from sqlite3 import Cursor
 from typing import Any, Generic, TypeVar, cast
 
 from sqlite_manager.interface import SQLiteInterface, SQLiteQueryError
 
 log = logging.getLogger(__name__)
 
-T = TypeVar("T", bound=dict[str, Any])
+T = TypeVar("T", bound=Mapping[str, Any])
 
 
 class CRUDBase(Generic[T]):
@@ -45,11 +46,12 @@ class CRUDBase(Generic[T]):
         """
 
         query = f"SELECT COUNT(*) FROM {self.table_name}"
-        count = self.db.fetch_one(query)[0]
+        result = self.db.fetch_one(query)
+        count = result[0] if result else 0
 
         return count == 0
 
-    def row_factory(self, cursor: Cursor, row: Row) -> T:
+    def row_factory(self, cursor: Cursor, row: tuple[Any, ...]) -> T:
         """Convert a row from the database into a dictionary.
 
         This method can be overridden in subclasses to customize the row
@@ -136,7 +138,7 @@ class CRUDBase(Generic[T]):
 
         try:
             record = self.db.fetch_one(query, params, self.row_factory)
-            return record
+            return cast(T, record) if record else None
         except SQLiteQueryError as e:
             log.error(f"Failed to fetch record from {self.table_name}: {e}")
             return None

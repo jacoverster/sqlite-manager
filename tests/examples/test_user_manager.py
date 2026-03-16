@@ -127,6 +127,7 @@ def test_list_users(test_user_manager: UserManager):
 
     users = test_user_manager.list_users()
 
+    assert users is not None
     assert len(users) == 2
     assert any(user["username"] == "user1" for user in users)
     assert any(user["username"] == "user2" for user in users)

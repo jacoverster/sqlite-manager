@@ -1,16 +1,20 @@
 from contextlib import closing, contextmanager
 import logging
 import sqlite3
-from collections.abc import Callable
+from collections.abc import Callable, Iterable, Mapping, Sequence
 from pathlib import Path
-from sqlite3 import Cursor, Row
-from typing import Any, Generator, Mapping, TypeVar
+from sqlite3 import Cursor
+from typing import Any, Generator, TypeVar, overload
 
 
 log = logging.getLogger(__name__)
 
 T = TypeVar("T", bound=tuple | dict)
-RowFactory = Callable[[Cursor, Row], T]
+# sqlite3 row factories receive raw tuples as their second argument.
+RowFactory = Callable[[Cursor, tuple[Any, ...]], T]
+
+# Accepted parameter types for SQLite query binding.
+Params = Sequence[Any] | Mapping[str, Any]
 
 # Default SQLite PRAGMA settings for the database connection.
 # These settings are chosen to balance performance and safety for web applications.
@@ -62,9 +66,14 @@ class SQLiteInterface:
         self.db_path = db_path
         self.pragmas = pragmas or {}
 
+    @staticmethod
+    def _bind_params(params: Params | None) -> Params:
+        """Returns params, or an empty tuple when params is None."""
+        return params if params is not None else ()
+
     @contextmanager
     def connection(
-        self, row_factory: RowFactory | None = None
+        self, row_factory: RowFactory[Any] | None = None
     ) -> Generator[sqlite3.Connection, None, None]:
         """Returns a connection to the SQLite database wih applied pragmas.
 
@@ -88,7 +97,7 @@ class SQLiteInterface:
 
             yield con
 
-    def execute_sql(self, query: str, params: Mapping[str, Any] = {}) -> None | int:
+    def execute_sql(self, query: str, params: Params | None = None) -> int:
         """Executes a SQL query and returns the number of changes if requested.
 
         Args:
@@ -104,20 +113,18 @@ class SQLiteInterface:
 
         try:
             with self.connection() as con:
-                cursor = con.execute(query, params)
+                cursor = con.execute(query, self._bind_params(params))
                 changes = cursor.execute("select changes()").fetchone()[0]
             return changes
         except sqlite3.Error as e:
             raise SQLiteQueryError(f"Failed to execute query: {e}") from e
 
-    def execute_many(
-        self, query: str, params: list[Mapping[str, Any]] = []
-    ) -> None | int:
+    def execute_many(self, query: str, params: Iterable[Params] | None = None) -> int:
         """Executes a SQL query with multiple parameter sets.
 
         Args:
             query: SQL query to execute.
-            params: List of parameter sets to bind to the query.
+            params: Optional iterable of parameter sets to bind to the query.
 
         Returns:
             Number of applied changes.
@@ -128,23 +135,39 @@ class SQLiteInterface:
 
         try:
             with self.connection() as con:
-                cursor = con.executemany(query, params)
+                cursor = con.executemany(query, params if params is not None else ())
                 changes = cursor.execute("select changes()").fetchone()[0]
             return changes
         except sqlite3.Error as e:
             raise SQLiteQueryError(f"Failed to execute batch query: {e}") from e
 
+    @overload
     def fetch_one(
         self,
         query: str,
-        params: Mapping[str, Any] = {},
+        params: Params | None = ...,
+        row_factory: None = ...,
+    ) -> tuple | None: ...
+
+    @overload
+    def fetch_one(
+        self,
+        query: str,
+        params: Params | None = ...,
+        row_factory: RowFactory[T] = ...,
+    ) -> T | None: ...
+
+    def fetch_one(
+        self,
+        query: str,
+        params: Params | None = None,
         row_factory: RowFactory[T] | None = None,
     ) -> T | tuple | None:
         """Fetches a single row from the database.
 
         Args:
             query: SQL query to execute.
-            params:  Optional parameters to bind to the query.
+            params: Optional parameters to bind to the query.
             row_factory: Optional callable that converts rows to desired format.
 
         Returns:
@@ -152,19 +175,35 @@ class SQLiteInterface:
         """
 
         with self.connection(row_factory) as con:
-            return con.execute(query, params).fetchone()
+            return con.execute(query, self._bind_params(params)).fetchone()
+
+    @overload
+    def fetch_all(
+        self,
+        query: str,
+        params: Params | None = ...,
+        row_factory: None = ...,
+    ) -> list[tuple] | None: ...
+
+    @overload
+    def fetch_all(
+        self,
+        query: str,
+        params: Params | None = ...,
+        row_factory: RowFactory[T] = ...,
+    ) -> list[T] | None: ...
 
     def fetch_all(
         self,
         query: str,
-        params: Mapping[str, Any] = {},
+        params: Params | None = None,
         row_factory: RowFactory[T] | None = None,
     ) -> list[T] | list[tuple] | None:
         """Fetches all rows from the database.
 
         Args:
             query: SQL query to execute.
-            params:  Optional parameters to bind to the query.
+            params: Optional parameters to bind to the query.
             row_factory: Optional callable that converts rows to desired format.
 
         Returns:
@@ -172,4 +211,4 @@ class SQLiteInterface:
         """
 
         with self.connection(row_factory) as con:
-            return con.execute(query, params).fetchall()
+            return con.execute(query, self._bind_params(params)).fetchall()

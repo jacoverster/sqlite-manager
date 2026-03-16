@@ -39,3 +39,7 @@ examples = [
     "ipykernel>=6.29.5",
     "pydantic>=2.11.2",
 ]
+
+[tool.ty.src]
+# Notebooks are example/demo files; exclude them from type analysis.
+exclude = ["examples/**/*.ipynb"]
