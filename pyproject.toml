@@ -35,9 +35,9 @@ dev = [
 
 [project.optional-dependencies]
 examples = [
-    "bcrypt>=4.3.0",
-    "ipykernel>=6.29.5",
-    "pydantic>=2.11.2",
+    "bcrypt>=5.0.0",
+    "ipykernel>=7.2.0",
+    "pydantic>=2.12.5",
 ]
 
 [tool.ty.src]
